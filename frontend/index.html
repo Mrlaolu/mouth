@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI对话系统</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="container">
+        <!-- 左侧视频区域 -->
+        <div class="video-section">
+            <div class="video-container">
+                <video id="digital-human" autoplay loop muted playsinline>
+                    <source src="../video/idle.mp4" type="video/mp4">
+                    您的浏览器不支持HTML5视频
+                </video>
+                <div class="video-overlay">
+                    <div class="video-status" id="video-status">闲置中</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 右侧对话区域 -->
+        <div class="chat-section">
+            <!-- 对话历史 -->
+            <div class="chat-history" id="chat-history">
+                <div class="welcome-message">
+                    <h2>欢迎使用AI对话系统</h2>
+                    <p>您可以通过文字或语音与AI进行交流</p>
+                </div>
+            </div>
+
+            <!-- 输入控制区 -->
+            <div class="input-section">
+                <div class="input-container">
+                    <textarea 
+                        id="message-input" 
+                        placeholder="请输入您的问题..." 
+                        rows="1"
+                    ></textarea>
+                    <div class="input-actions">
+                        <button 
+                            id="voice-btn" 
+                            class="action-btn voice-btn"
+                            title="语音输入"
+                        >
+                            <span class="btn-icon">🎤</span>
+                            <span class="btn-text">语音</span>
+                        </button>
+                        <button 
+                            id="send-btn" 
+                            class="action-btn send-btn"
+                            title="发送消息"
+                        >
+                            <span class="btn-icon">➤</span>
+                            <span class="btn-text">发送</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 音量控制 -->
+                <div class="volume-control">
+                    <span class="volume-icon">🔊</span>
+                    <input 
+                        type="range" 
+                        id="volume-slider" 
+                        min="0" 
+                        max="100" 
+                        value="80"
+                    >
+                    <span class="volume-value" id="volume-value">80%</span>
+                </div>
+
+                <!-- 状态信息 -->
+                <div class="status-info" id="status-info">
+                    就绪
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 加载指示器 -->
+    <div class="loading-overlay" id="loading-overlay">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">正在处理...</div>
+    </div>
+
+    <!-- 录音指示器 -->
+    <div class="recording-indicator" id="recording-indicator">
+        <div class="recording-dot"></div>
+        <div class="recording-text">正在录音...</div>
+    </div>
+
+    <!-- JavaScript文件 -->
+    <script src="js/main.js"></script>
+    <script src="js/chat.js"></script>
+    <script src="js/speech.js"></script>
+    <script src="js/video.js"></script>
+</body>
+</html>

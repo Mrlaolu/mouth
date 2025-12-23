@@ -1,0 +1,6 @@
+Flask
+flask-cors
+paddlespeech
+pydub
+python-dotenv
+gunicorn
