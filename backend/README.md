@@ -1,4 +1,4 @@
-# TTS服务部署与API文档
+# 语音服务部署与API文档
 
 ## 1. 环境配置
 
@@ -30,6 +30,48 @@ source venv/bin/activate
 # 安装依赖
 pip install -r requirements.txt
 ```
+
+### 1.2 配置Vosk模型（语音识别）
+
+语音识别服务基于Vosk实现，需要下载并配置中文模型：
+
+1. 下载Vosk中文模型：
+   ```bash
+   # 方式1：使用PowerShell
+   Invoke-WebRequest -Uri https://alphacephei.com/vosk/models/vosk-model-cn-0.22.zip -OutFile vosk-model-cn-0.22.zip
+   
+   # 方式2：使用curl
+   curl -O https://alphacephei.com/vosk/models/vosk-model-cn-0.22.zip
+   ```
+
+2. 解压模型文件：
+   ```bash
+   # PowerShell
+   Expand-Archive -Path vosk-model-cn-0.22.zip -DestinationPath .
+   
+   # Linux/Mac
+   unzip vosk-model-cn-0.22.zip
+   ```
+
+3. 重命名模型目录：
+   ```bash
+   # PowerShell
+   Rename-Item -Path vosk-model-cn-0.22 -NewName model
+   
+   # Linux/Mac
+   mv vosk-model-cn-0.22 model
+   ```
+
+4. 确保模型目录结构：
+   ```
+   backend/
+   └── model/
+       ├── am/
+       ├── conf/
+       ├── graph/
+       ├── ivector/
+       └── rescore/
+   ```
 
 ## 2. 服务启动
 
@@ -93,7 +135,51 @@ curl -X POST -H "Content-Type: application/json" -d '{"text":"你好，这是Pad
   }
   ```
 
-### 3.2 其他接口
+### 3.2 语音识别接口（ASR）
+
+#### 接口URL
+```
+POST /api/asr
+```
+
+#### 请求参数
+
+| 参数名 | 类型 | 必填 | 默认值 | 说明 |
+|--------|------|------|--------|------|
+| audio | file | 是 | - | WAV格式音频文件（单声道、16位、16000Hz） |
+
+#### 请求示例
+
+```bash
+# 使用curl
+curl -X POST -F 'audio=@output.wav' http://localhost:5000/api/asr
+
+# 使用Python requests
+import requests
+url = 'http://localhost:5000/api/asr'
+files = {'audio': ('output.wav', open('output.wav', 'rb'), 'audio/wav')}
+response = requests.post(url, files=files)
+print(response.json())
+```
+
+#### 响应示例
+
+- 成功响应：
+  ```json
+  {
+    "text": "识别结果文本",
+    "confidence": 0.9
+  }
+  ```
+
+- 失败响应：
+  ```json
+  {
+    "error": "错误信息"
+  }
+  ```
+
+### 3.3 其他接口
 
 #### 获取路由列表
 ```
@@ -141,10 +227,14 @@ gunicorn -w $(nproc) -b 0.0.0.0:5000 app:app
 
 | 错误码 | 错误信息 | 说明 |
 |--------|----------|------|
-| 400 | Text is required | 缺少text参数 |
-| 400 | 文本不能为空 | text参数为空 |
-| 400 | 文本长度不能超过1000字符 | 文本长度超过限制 |
-| 500 | 语音合成失败，请稍后重试 | 服务内部错误 |
+| 400 | Text is required | 缺少text参数（TTS） |
+| 400 | 文本不能为空 | text参数为空（TTS） |
+| 400 | 文本长度不能超过1000字符 | 文本长度超过限制（TTS） |
+| 400 | Audio file is required | 缺少audio参数（ASR） |
+| 400 | 音频格式必须为: 单声道, 16位, 16000Hz | 音频格式不符合要求（ASR） |
+| 500 | 语音合成失败，请稍后重试 | 服务内部错误（TTS） |
+| 500 | 语音识别失败，请稍后重试 | 服务内部错误（ASR） |
+| 500 | 语音识别模型未加载，请下载并配置Vosk模型 | Vosk模型未正确配置（ASR） |
 
 ### 6.2 日志查看
 
@@ -157,6 +247,7 @@ tail -f tts_service.log
 
 - **Web框架**: Flask
 - **TTS引擎**: PaddleSpeech
+- **ASR引擎**: Vosk
 - **音频处理**: pydub
 - **生产服务器**: gunicorn
 - **跨域支持**: flask-cors
@@ -164,5 +255,6 @@ tail -f tts_service.log
 ## 8. 版本信息
 
 - PaddleSpeech: 最新版
+- Vosk: 最新版
 - Python: 3.8+
 - Flask: 最新版

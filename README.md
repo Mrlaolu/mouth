@@ -88,14 +88,14 @@ python -m http.server 8000
    ```bash
    python app.py
    ```
-   服务将运行在 http://127.0.0.1:5002
+   服务将运行在 http://127.0.0.1:5000
 
 4. **启动前端服务**
    ```bash
    cd frontend
-   python -m http.server 8080
+   python -m http.server 8000
    ```
-   前端将运行在 http://127.0.0.1:8080
+   前端将运行在 http://127.0.0.1:8000
 
 ### API端点
 

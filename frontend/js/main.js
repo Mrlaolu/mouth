@@ -24,7 +24,10 @@ class AIChatApp {
                 apiBaseUrl: this.config.apiBaseUrl,
                 onSpeechRecognized: this.handleSpeechRecognized.bind(this),
                 onAudioPlayed: this.handleAudioPlayed.bind(this),
-                onAudioEnded: this.handleAudioEnded.bind(this)
+                onAudioEnded: this.handleAudioEnded.bind(this),
+                onProgress: (progress) => {
+                    this.chatManager.updateTTSProgress(progress);
+                }
             });
             
             // 绑定事件
@@ -104,9 +107,6 @@ class AIChatApp {
         // 发送消息
         this.chatManager.sendMessage(message)
             .then(async (aiResponse) => {
-                // 显示AI响应
-                this.chatManager.displayMessage(aiResponse, 'ai');
-                
                 // 转换为语音
                 await this.speechManager.textToSpeech(aiResponse);
             })
@@ -137,9 +137,6 @@ class AIChatApp {
             // 发送到AI处理
             this.chatManager.sendMessage(text)
                 .then(async (aiResponse) => {
-                    // 显示AI响应
-                    this.chatManager.displayMessage(aiResponse, 'ai');
-                    
                     // 转换为语音
                     await this.speechManager.textToSpeech(aiResponse);
                 })

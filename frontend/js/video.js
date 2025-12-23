@@ -103,13 +103,29 @@ class VideoManager {
             
             // 使用setTimeout确保opacity过渡效果
             setTimeout(() => {
-                this.videoElement.src = videoPath;
-                this.videoElement.play();
-                this.videoElement.style.opacity = '1';
+                // 移除之前的事件监听器
+                this.videoElement.removeEventListener('loadeddata', this._onVideoLoaded);
                 
-                // 更新状态
-                this.currentState = state;
-                this.updateStatus(state);
+                // 添加loadeddata事件监听器，确保视频加载完成后再播放
+                this._onVideoLoaded = () => {
+                    try {
+                        this.videoElement.play();
+                        this.videoElement.style.opacity = '1';
+                        
+                        // 更新状态
+                        this.currentState = state;
+                        this.updateStatus(state);
+                    } catch (playError) {
+                        console.warn('视频播放失败:', playError);
+                        // 播放失败时仍需更新状态
+                        this.videoElement.style.opacity = '1';
+                        this.currentState = state;
+                        this.updateStatus(state);
+                    }
+                };
+                
+                this.videoElement.addEventListener('loadeddata', this._onVideoLoaded);
+                this.videoElement.src = videoPath;
             }, 200);
             
         } catch (error) {

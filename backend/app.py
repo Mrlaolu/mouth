@@ -2,16 +2,21 @@ import logging
 from flask import Flask, jsonify, request, send_file, Response
 from flask_cors import CORS
 from tts_service import TTSService
+from services.speech_recognition import SpeechRecognitionService
 
 # 配置日志
 logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    level=logging.DEBUG,
+    format='%(asctime)s - %(name)s - %(levelname)s - [%(filename)s:%(lineno)d] - %(message)s',
     handlers=[
         logging.FileHandler('tts_service.log'),
         logging.StreamHandler()
     ]
 )
+
+# 确保所有模块都使用相同的日志配置
+for name in logging.root.manager.loggerDict:
+    logging.getLogger(name).setLevel(logging.DEBUG)
 
 logger = logging.getLogger(__name__)
 
@@ -33,6 +38,9 @@ CORS(app,
 
 # 初始化TTS服务
 tts_service = TTSService()
+
+# 初始化ASR服务
+asr_service = SpeechRecognitionService()
 
 # 简单的根路径
 @app.route('/', methods=['GET', 'OPTIONS'])
@@ -131,11 +139,22 @@ def asr():
         if audio_file.filename == '':
             return jsonify({'error': 'No selected file'}), 400
         
-        # 这里应该调用ASR服务，现在返回模拟响应
-        return jsonify({'text': '语音识别服务未实现', 'confidence': 0.0}), 200
+        # 读取音频数据
+        audio_data = audio_file.read()
         
+        # 调用ASR服务
+        logger.info(f"收到ASR请求，音频大小: {len(audio_data)}字节")
+        text = asr_service.recognize_from_wav(audio_data)
+        
+        logger.info(f"ASR请求处理完成，识别结果: {text}")
+        return jsonify({'text': text, 'confidence': 0.9}), 200
+        
+    except ValueError as e:
+        logger.error(f"ASR请求参数错误: {str(e)}")
+        return jsonify({'error': str(e)}), 400
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        logger.error(f"ASR服务错误: {str(e)}", exc_info=True)
+        return jsonify({'error': '语音识别失败，请稍后重试'}), 500
 
 # 打印所有注册的路由
 @app.route('/routes', methods=['GET'])

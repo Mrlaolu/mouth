@@ -4,3 +4,4 @@ paddlespeech
 pydub
 python-dotenv
 gunicorn
+vosk
