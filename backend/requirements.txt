@@ -1,5 +1,7 @@
 Flask
 flask-cors
+numpy==1.26
+paddlepaddle
 paddlespeech
 pydub
 python-dotenv
