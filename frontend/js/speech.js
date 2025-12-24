@@ -8,6 +8,10 @@ class SpeechManager {
         this.audioContext = null;
         this.audioElement = null;
         this.volume = 0.8;
+        // 浏览器TTS相关
+        this.browserTTSEnabled = false;
+        this.isBrowserTTSSupported = this.checkBrowserTTSSupport();
+        this.currentUtterance = null;
         
         // DOM元素
         this.voiceBtn = document.getElementById('voice-btn');
@@ -15,6 +19,22 @@ class SpeechManager {
         
         // 初始化音频元素
         this.initAudioElement();
+    }
+    
+    checkBrowserTTSSupport() {
+        // 检查浏览器是否支持原生TTS API
+        return 'speechSynthesis' in window;
+    }
+    
+    setBrowserTTSEnabled(enabled) {
+        // 设置是否使用浏览器TTS
+        this.browserTTSEnabled = enabled && this.isBrowserTTSSupported;
+        return this.browserTTSEnabled;
+    }
+    
+    getBrowserTTSEnabled() {
+        // 获取当前浏览器TTS状态
+        return this.browserTTSEnabled;
     }
 
     initAudioElement() {
@@ -252,6 +272,87 @@ class SpeechManager {
         //     text: 要转换的文字
         //     pitch: 音调 (0.5 - 2.0)，默认 1.0
         console.time('TTS总耗时');
+        
+        // 根据开关状态选择不同的TTS实现
+        if (this.browserTTSEnabled) {
+            // 使用浏览器原生TTS
+            await this.browserTextToSpeech(text, pitch);
+        } else {
+            // 使用后端TTS服务
+            await this.backendTextToSpeech(text, pitch);
+        }
+    }
+    
+    async browserTextToSpeech(text, pitch = 1.0) {
+        // 使用浏览器原生TTS API转换文字为语音
+        try {
+            // 取消当前正在播放的语音
+            if (this.currentUtterance) {
+                window.speechSynthesis.cancel();
+                this.currentUtterance = null;
+            }
+            
+            // 进度条逻辑 - 浏览器TTS几乎是实时的，所以快速完成进度
+            if (this.options.onProgress) {
+                this.options.onProgress(0);
+                setTimeout(() => this.options.onProgress(50), 100);
+                setTimeout(() => this.options.onProgress(100), 200);
+            }
+            
+            // 触发音频播放开始事件
+            if (this.options.onAudioPlayed) {
+                this.options.onAudioPlayed();
+            }
+            
+            // 创建语音合成实例
+            this.currentUtterance = new SpeechSynthesisUtterance(text);
+            
+            // 设置语音参数
+            this.currentUtterance.volume = this.volume;
+            this.currentUtterance.rate = 1.0; // 语速
+            this.currentUtterance.pitch = pitch; // 音调
+            this.currentUtterance.lang = 'zh-CN'; // 使用中文
+            
+            // 绑定语音事件
+            this.currentUtterance.onend = () => {
+                this.currentUtterance = null;
+                if (this.options.onAudioEnded) {
+                    this.options.onAudioEnded();
+                    if (this.options.onProgress) this.options.onProgress(101);
+                }
+                console.timeEnd('TTS总耗时');
+            };
+            
+            this.currentUtterance.onerror = (event) => {
+                console.error('浏览器TTS错误:', event);
+                this.currentUtterance = null;
+                if (this.options.onProgress) this.options.onProgress(-1);
+                if (this.options.onAudioEnded) {
+                    setTimeout(() => {
+                        this.options.onAudioEnded();
+                    }, 1000);
+                }
+                console.timeEnd('TTS总耗时');
+            };
+            
+            // 开始语音合成
+            window.speechSynthesis.speak(this.currentUtterance);
+            
+        } catch (error) {
+            console.error('浏览器文字转语音失败:', error);
+            if (this.options.onProgress) this.options.onProgress(-1);
+            if (this.options.onAudioPlayed) this.options.onAudioPlayed();
+            if (this.options.onAudioEnded) {
+                setTimeout(() => {
+                    this.options.onAudioEnded();
+                }, 1000);
+            }
+            console.timeEnd('TTS总耗时');
+        }
+    }
+    
+    async backendTextToSpeech(text, pitch = 1.0) {
+        // 使用后端TTS服务转换文字为语音
         try {
             const url = `${this.options.apiBaseUrl}/tts`;
             

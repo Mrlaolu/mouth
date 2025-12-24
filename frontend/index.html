@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI对话系统</title>
     <link rel="stylesheet" href="css/style.css">
-    <!-- 补充样式：用于新的角色切换按钮 -->
+    <!-- 补充样式：用于新的角色切换按钮和TTS开关 -->
     <style>
         .settings-control {
             display: flex;
@@ -42,6 +42,71 @@
             align-items: center;
             justify-content: space-between;
             margin-top: 10px;
+        }
+        
+        /* TTS开关样式 */
+        .tts-switch-container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-left: 15px;
+            padding-left: 15px;
+            border-left: 1px solid #ddd;
+            height: 30px;
+        }
+        .tts-switch-label {
+            font-size: 14px;
+            color: #555;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .tts-switch {
+            position: relative;
+            display: inline-block;
+            width: 40px;
+            height: 20px;
+        }
+        .tts-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .tts-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 20px;
+        }
+        .tts-slider:before {
+            position: absolute;
+            content: "";
+            height: 14px;
+            width: 14px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        input:checked + .tts-slider {
+            background-color: #4CAF50;
+        }
+        input:focus + .tts-slider {
+            box-shadow: 0 0 1px #4CAF50;
+        }
+        input:checked + .tts-slider:before {
+            transform: translateX(20px);
+        }
+        .tts-status {
+            font-size: 12px;
+            color: #888;
         }
     </style>
 </head>
@@ -99,7 +164,7 @@
                     </div>
                 </div>
 
-                <!-- 底部控制栏：包含音量和新增加的角色切换 -->
+                <!-- 底部控制栏：包含音量、角色切换和TTS开关 -->
                 <div class="bottom-controls">
                     <!-- 音量控制 -->
                     <div class="volume-control">
@@ -120,6 +185,18 @@
                             <span id="gender-icon">👩</span>
                             <span id="gender-text">女性角色</span>
                         </button>
+                    </div>
+                    
+                    <!-- 【新增】TTS开关 -->
+                    <div class="tts-switch-container">
+                        <label class="tts-switch-label">
+                            <span>浏览器TTS</span>
+                            <label class="tts-switch">
+                                <input type="checkbox" id="tts-switch">
+                                <span class="tts-slider"></span>
+                            </label>
+                            <span id="tts-status" class="tts-status">关闭</span>
+                        </label>
                     </div>
                 </div>
 

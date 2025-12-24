@@ -62,6 +62,14 @@ class AIChatApp {
             });
         }
         
+        // --- 新增：绑定TTS开关事件 ---
+        const ttsSwitch = document.getElementById('tts-switch');
+        if (ttsSwitch) {
+            ttsSwitch.addEventListener('change', (e) => {
+                this.handleTTSSwitchChange(e.target.checked);
+            });
+        }
+        
         // 发送按钮点击事件
         sendBtn.addEventListener('click', () => this.handleSendMessage());
         
@@ -95,11 +103,96 @@ class AIChatApp {
         volumeSlider.value = this.config.defaultVolume * 100;
         volumeValue.textContent = `${Math.round(this.config.defaultVolume * 100)}%`;
         
+        // 初始化TTS开关状态
+        this.initTTSSwitch();
+        
         // 初始化视频状态
         this.videoManager.switchToIdle();
         
         // 清空输入框
         this.clearInput();
+    }
+    
+    initTTSSwitch() {
+        // 初始化TTS开关
+        const ttsSwitch = document.getElementById('tts-switch');
+        const ttsStatus = document.getElementById('tts-status');
+        
+        if (!ttsSwitch || !ttsStatus) return;
+        
+        // 检查浏览器是否支持原生TTS
+        const isSupported = this.speechManager.isBrowserTTSSupported;
+        
+        if (!isSupported) {
+            // 浏览器不支持原生TTS，禁用开关并显示提示
+            ttsSwitch.disabled = true;
+            ttsStatus.textContent = '浏览器不支持';
+            ttsStatus.style.color = '#ff6b6b';
+            return;
+        }
+        
+        // 从本地存储加载TTS设置
+        const savedState = this.loadTTSSettings();
+        ttsSwitch.checked = savedState.enabled;
+        
+        // 设置SpeechManager的TTS状态
+        this.speechManager.setBrowserTTSEnabled(savedState.enabled);
+        
+        // 更新UI状态
+        this.updateTTSSwitchUI(savedState.enabled);
+    }
+    
+    handleTTSSwitchChange(checked) {
+        // 处理TTS开关变化
+        const success = this.speechManager.setBrowserTTSEnabled(checked);
+        
+        if (success) {
+            // 保存设置到本地存储
+            this.saveTTSSettings(checked);
+            // 更新UI状态
+            this.updateTTSSwitchUI(checked);
+        } else {
+            // 浏览器不支持，恢复开关状态
+            const ttsSwitch = document.getElementById('tts-switch');
+            if (ttsSwitch) {
+                ttsSwitch.checked = false;
+            }
+            this.updateTTSSwitchUI(false);
+            this.showError('您的浏览器不支持原生文本转语音功能');
+        }
+    }
+    
+    updateTTSSwitchUI(enabled) {
+        // 更新TTS开关UI状态
+        const ttsStatus = document.getElementById('tts-status');
+        if (ttsStatus) {
+            ttsStatus.textContent = enabled ? '开启' : '关闭';
+            ttsStatus.style.color = enabled ? '#4CAF50' : '#888';
+        }
+    }
+    
+    loadTTSSettings() {
+        // 从本地存储加载TTS设置
+        try {
+            const saved = localStorage.getItem('ttsSettings');
+            if (saved) {
+                return JSON.parse(saved);
+            }
+        } catch (error) {
+            console.error('加载TTS设置失败:', error);
+        }
+        // 默认设置
+        return { enabled: false };
+    }
+    
+    saveTTSSettings(enabled) {
+        // 保存TTS设置到本地存储
+        try {
+            const settings = { enabled };
+            localStorage.setItem('ttsSettings', JSON.stringify(settings));
+        } catch (error) {
+            console.error('保存TTS设置失败:', error);
+        }
     }
 
     handleSendMessage() {
