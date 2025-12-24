@@ -1,22 +1,43 @@
 // 视频控制模块
 class VideoManager {
     constructor() {
-        this.currentState = 'idle'; // idle 或 speaking
+        // 状态管理
+        this.currentState = 'idle';   // 'idle' 或 'speaking'
+        this.currentGender = 'female'; // 'female' 或 'male'
+        
         this.videoElement = null;
         this.videoStatusElement = null;
         
-        // 视频资源路径
-        this.videoPaths = {
-            idle: '../video/idle.mp4',
-            speaking: '../video/speak.mp4'
+        // --- 核心配置：在这里定义男女角色的视频列表 ---
+        // 注意：请确保 ../video/ 目录下存在对应的文件
+        // 如果文件不存在，请修改为你实际拥有的文件名
+        this.avatarConfig = {
+            female: {
+                label: '女性角色',
+                icon: '👩',
+                pitch: 1.0, // 女声标准音调
+                // 女性待机视频列表 (随机播放)
+                idle: ['../video/idle.mp4', '../video/idle2.mp4'], 
+                // 女性说话视频列表 (随机播放)
+                speaking: ['../video/speak.mp4', '../video/speak2.mp4']
+            },
+            male: {
+                label: '男性角色',
+                icon: '👨',
+                pitch: 0.8, // 男声较低音调
+                // 男性待机视频列表 (示例文件名，请确保你放入了对应文件)
+                idle: ['../video/male_idle.mp4', '../video/male_idle2.mp4'],
+                // 男性说话视频列表
+                speaking: ['../video/male_speak.mp4', '../video/male_speak2.mp4']
+            }
         };
-        
+
         // 初始化视频元素
         this.initVideoElement();
     }
 
     initVideoElement() {
-        // 初始化视频元素
+        // 获取DOM元素
         this.videoElement = document.getElementById('digital-human');
         this.videoStatusElement = document.getElementById('video-status');
         
@@ -24,121 +45,111 @@ class VideoManager {
             console.error('视频元素未找到');
             return;
         }
-        
-        // 预加载视频资源
-        this.preloadVideos();
-        
-        // 绑定视频事件
-        this.videoElement.addEventListener('loadeddata', () => {
-            console.log('视频加载完成:', this.videoElement.src);
+
+        // 1. 移除HTML中的 loop 属性（如果存在），由JS接管循环逻辑
+        // 这样每次播放完都能触发 ended 事件，从而随机选下一个
+        this.videoElement.loop = false;
+
+        // 2. 绑定关键事件：当前视频播放结束时，自动随机播放下一个
+        // 这实现了“无限随机续播”功能
+        this.videoElement.addEventListener('ended', () => {
+            this.playNextRandomVideo();
         });
         
+        this.videoElement.addEventListener('loadeddata', () => {
+            // 视频加载完成，可以做些处理，比如调整透明度显示出来
+            this.videoElement.style.opacity = '1';
+        });
+
         this.videoElement.addEventListener('error', (e) => {
-            console.error('视频加载错误:', e);
+            console.error('视频播放错误:', e);
             this.showError('视频加载失败');
         });
-        
-        this.videoElement.addEventListener('ended', () => {
-            // 循环播放当前视频
-            this.videoElement.play();
-        });
+
+        // 3. 初始加载并播放
+        // 稍微延迟一点确保DOM完全就绪
+        setTimeout(() => {
+            this.playNextRandomVideo();
+        }, 100);
     }
 
-    preloadVideos() {
-        // 预加载视频资源
-        // 创建预加载视频元素
-        const idleVideo = document.createElement('video');
-        idleVideo.preload = 'auto';
-        idleVideo.src = this.videoPaths.idle;
+    // --- 核心逻辑：播放下一个随机视频 ---
+    playNextRandomVideo() {
+        const config = this.avatarConfig[this.currentGender];
+        // 根据当前状态(idle/speaking)获取对应的视频列表
+        const videoList = config[this.currentState];
         
-        const speakVideo = document.createElement('video');
-        speakVideo.preload = 'auto';
-        speakVideo.src = this.videoPaths.speak;
+        if (!videoList || videoList.length === 0) {
+            console.warn(`未找到 ${this.currentGender} - ${this.currentState} 的视频列表`);
+            return;
+        }
+
+        // 随机选择一个索引
+        const randomIndex = Math.floor(Math.random() * videoList.length);
+        const nextVideoPath = videoList[randomIndex];
+
+        // 切换视频源
+        // 注意：单video标签切换src时可能会有短暂黑屏/闪烁
+        // 为了平滑过渡，通常需要双video标签交替，这里保持简单使用单标签
+        this.videoElement.src = nextVideoPath;
         
-        // 预加载完成后移除元素
-        idleVideo.addEventListener('loadeddata', () => {
-            console.log('闲置视频预加载完成');
-            idleVideo.remove();
-        });
+        // 尝试播放
+        const playPromise = this.videoElement.play();
         
-        speakVideo.addEventListener('loadeddata', () => {
-            console.log('说话视频预加载完成');
-            speakVideo.remove();
-        });
+        if (playPromise !== undefined) {
+            playPromise.catch(error => {
+                // 浏览器通常会阻止自动播放，直到用户与页面交互
+                console.log("等待用户交互以开始播放视频:", error);
+            });
+        }
     }
 
+    // 切换到闲置状态
     switchToIdle() {
-        // 切换到闲置状态视频
-        if (this.currentState === 'idle') {
-            return; // 已经是闲置状态，无需切换
-        }
+        if (this.currentState === 'idle') return;
         
-        this._switchVideo('idle');
+        this.currentState = 'idle';
+        this.updateStatus('idle');
+        // 立即切换视频，不要等待当前视频播完，以获得更快的响应
+        this.playNextRandomVideo(); 
     }
 
+    // 切换到说话状态
     switchToSpeaking() {
-        // 切换到说话状态视频
-        if (this.currentState === 'speaking') {
-            return; // 已经是说话状态，无需切换
-        }
+        if (this.currentState === 'speaking') return;
         
-        this._switchVideo('speaking');
+        this.currentState = 'speaking';
+        this.updateStatus('speaking');
+        // 立即切换视频
+        this.playNextRandomVideo();
     }
 
-    _switchVideo(state) {
-        // 切换视频状态
-        // 
-        // Args:
-        //     state: 目标状态 ('idle' 或 'speaking')
-        try {
-            const videoPath = this.videoPaths[state];
-            
-            if (!videoPath) {
-                console.error('无效的视频状态:', state);
-                return;
-            }
-            
-            // 平滑切换视频
-            this.videoElement.style.opacity = '0';
-            
-            // 使用setTimeout确保opacity过渡效果
-            setTimeout(() => {
-                // 移除之前的事件监听器
-                this.videoElement.removeEventListener('loadeddata', this._onVideoLoaded);
-                
-                // 添加loadeddata事件监听器，确保视频加载完成后再播放
-                this._onVideoLoaded = () => {
-                    try {
-                        this.videoElement.play();
-                        this.videoElement.style.opacity = '1';
-                        
-                        // 更新状态
-                        this.currentState = state;
-                        this.updateStatus(state);
-                    } catch (playError) {
-                        console.warn('视频播放失败:', playError);
-                        // 播放失败时仍需更新状态
-                        this.videoElement.style.opacity = '1';
-                        this.currentState = state;
-                        this.updateStatus(state);
-                    }
-                };
-                
-                this.videoElement.addEventListener('loadeddata', this._onVideoLoaded);
-                this.videoElement.src = videoPath;
-            }, 200);
-            
-        } catch (error) {
-            console.error('视频切换失败:', error);
-            this.showError('视频切换失败');
-        }
+    // --- 新增功能：切换性别 ---
+    toggleGender() {
+        // 1. 切换状态变量
+        this.currentGender = this.currentGender === 'female' ? 'male' : 'female';
+        const config = this.avatarConfig[this.currentGender];
+
+        // 2. 更新UI按钮显示 (图标和文字)
+        const iconEl = document.getElementById('gender-icon');
+        const textEl = document.getElementById('gender-text');
+        
+        if (iconEl) iconEl.textContent = config.icon;
+        if (textEl) textEl.textContent = config.label;
+
+        console.log(`切换性别为: ${this.currentGender}, 音调: ${config.pitch}`);
+        
+        // 3. 立即刷新视频内容
+        this.playNextRandomVideo();
+    }
+
+    // --- 新增功能：获取当前角色的音调 (供TTS使用) ---
+    getCurrentPitch() {
+        return this.avatarConfig[this.currentGender].pitch;
     }
 
     updateStatus(state) {
-        // 更新视频状态显示
-        // 
-        // Args:
-        //     state: 当前状态 ('idle' 或 'speaking')
+        // 更新视频状态文字显示
         if (!this.videoStatusElement) return;
         
         const statusText = {
@@ -151,10 +162,7 @@ class VideoManager {
 
     showError(message) {
         // 显示错误信息
-        // 
-        // Args:
-        //     message: 错误信息
-        console.error('视频错误:', message);
+        console.error('VideoManager Error:', message);
         
         if (this.videoStatusElement) {
             this.videoStatusElement.textContent = `错误: ${message}`;
@@ -169,47 +177,11 @@ class VideoManager {
             }
         }, 3000);
     }
-
-    getCurrentState() {
-        // 获取当前视频状态
-        // 
-        // Returns:
-        //     str: 当前状态 ('idle' 或 'speaking')
-        return this.currentState;
-    }
-
+    
+    // 辅助方法：设置音量
     setVolume(volume) {
-        // 设置视频音量
-        // 
-        // Args:
-        //     volume: 音量值 (0.0-1.0)
         if (this.videoElement) {
             this.videoElement.volume = volume;
-        }
-    }
-
-    play() {
-        // 播放视频
-        if (this.videoElement && this.videoElement.paused) {
-            this.videoElement.play();
-        }
-    }
-
-    pause() {
-        // 暂停视频
-        if (this.videoElement && !this.videoElement.paused) {
-            this.videoElement.pause();
-        }
-    }
-
-    togglePlay() {
-        // 切换播放/暂停状态
-        if (this.videoElement) {
-            if (this.videoElement.paused) {
-                this.videoElement.play();
-            } else {
-                this.videoElement.pause();
-            }
         }
     }
 }

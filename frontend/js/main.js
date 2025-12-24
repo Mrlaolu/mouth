@@ -47,11 +47,20 @@ class AIChatApp {
 
     bindEvents() {
         // 绑定事件监听器
-        // 文字输入事件
         const messageInput = document.getElementById('message-input');
         const sendBtn = document.getElementById('send-btn');
         const voiceBtn = document.getElementById('voice-btn');
         const volumeSlider = document.getElementById('volume-slider');
+        
+        // --- 新增：绑定性别切换按钮事件 ---
+        const genderBtn = document.getElementById('gender-switch-btn');
+        if (genderBtn) {
+            genderBtn.addEventListener('click', () => {
+                if (this.videoManager) {
+                    this.videoManager.toggleGender();
+                }
+            });
+        }
         
         // 发送按钮点击事件
         sendBtn.addEventListener('click', () => this.handleSendMessage());
@@ -74,19 +83,19 @@ class AIChatApp {
         volumeSlider.addEventListener('input', (e) => {
             const volume = e.target.value / 100;
             this.speechManager.setVolume(volume);
+            this.videoManager.setVolume(volume); // 同步设置视频音量
             this.updateVolumeDisplay(e.target.value);
         });
     }
 
     initUI() {
         // 初始化UI状态
-        // 设置默认音量
         const volumeSlider = document.getElementById('volume-slider');
         const volumeValue = document.getElementById('volume-value');
         volumeSlider.value = this.config.defaultVolume * 100;
         volumeValue.textContent = `${Math.round(this.config.defaultVolume * 100)}%`;
         
-        // 初始化视频
+        // 初始化视频状态
         this.videoManager.switchToIdle();
         
         // 清空输入框
@@ -108,7 +117,9 @@ class AIChatApp {
         this.chatManager.sendMessage(message)
             .then(async (aiResponse) => {
                 // 转换为语音
-                await this.speechManager.textToSpeech(aiResponse);
+                // --- 修改点：获取当前角色音调并传入 ---
+                const currentPitch = this.videoManager.getCurrentPitch();
+                await this.speechManager.textToSpeech(aiResponse, currentPitch);
             })
             .catch(error => {
                 console.error('发送消息失败:', error);
@@ -138,7 +149,9 @@ class AIChatApp {
             this.chatManager.sendMessage(text)
                 .then(async (aiResponse) => {
                     // 转换为语音
-                    await this.speechManager.textToSpeech(aiResponse);
+                    // --- 修改点：获取当前角色音调并传入 ---
+                    const currentPitch = this.videoManager.getCurrentPitch();
+                    await this.speechManager.textToSpeech(aiResponse, currentPitch);
                 })
                 .catch(error => {
                     console.error('AI处理失败:', error);
@@ -148,12 +161,12 @@ class AIChatApp {
     }
 
     handleAudioPlayed() {
-        // 处理音频开始播放
+        // 处理音频开始播放 -> 切换到说话视频
         this.videoManager.switchToSpeaking();
     }
 
     handleAudioEnded() {
-        // 处理音频播放结束
+        // 处理音频播放结束 -> 切换回待机视频
         this.videoManager.switchToIdle();
     }
 
@@ -178,12 +191,10 @@ class AIChatApp {
 
     showError(message) {
         // 显示错误信息
-        // 这里可以实现更复杂的错误提示
         alert(message);
     }
 
     showLoading(show = true) {
-        // 显示/隐藏加载指示器
         const loadingOverlay = document.getElementById('loading-overlay');
         if (show) {
             loadingOverlay.classList.add('active');
